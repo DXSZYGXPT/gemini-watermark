@@ -3,6 +3,3 @@ services:
     name: gemini-watermark
     runtime: docker
     dockerfilePath: ./Dockerfile
-    envVars:
-      - key: PORT
-        value: 8000
