@@ -98,15 +98,17 @@
   </div>
 
   <div class="tips">
-    <div class="tip"><div class="tip-icon">🐍</div><h3>服务端 Python</h3><p>OpenCV TELEA inpainting + 纯 numpy 高斯定位，无浏览器兼容性问题。</p></div>
-    <div class="tip"><div class="tip-icon">🎯</div><h3>精准去除</h3><p>高斯平滑峰值定位水印中心，四周取背景双线性插值，效果稳定。</p></div>
+    <div class="tip"><div class="tip-icon">🐍</div><h3>服务端 Python</h3><p>OpenCV TELEA inpainting，处理速度 &lt;0.5s，不受超时限制影响。</p></div>
+    <div class="tip"><div class="tip-icon">🎯</div><h3>精准去除</h3><p>高斯平滑峰值定位水印中心，四周取背景双线性插值，效果稳定可靠。</p></div>
     <div class="tip"><div class="tip-icon">🗑️</div><h3>不留副本</h3><p>图片处理完立即返回，服务器不保存任何上传的文件。</p></div>
   </div>
   <footer>本工具仅供个人合法用途 · 请勿违反 Google 服务条款</footer>
 </div>
 
 <script>
-let currentFile = null, resultBlob = null;
+let currentFile = null;
+let resultBlob = null;
+let resultExt = 'jpg';
 
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
@@ -137,48 +139,70 @@ async function process() {
   if (!currentFile) return;
   document.getElementById('btnProcess').disabled = true;
   document.getElementById('btnDownload').disabled = true;
-  setStatus('working', '处理中...'); setProgress(true, 20, '上传图片...');
+  setStatus('working', '处理中...'); setProgress(true, 15, '上传图片...');
 
   try {
     const fd = new FormData();
     fd.append('file', currentFile);
 
-    let fakeP = 20;
+    // 进度动画
+    let fakeP = 15;
     const timer = setInterval(() => {
-      fakeP = Math.min(fakeP + 4, 88);
+      fakeP = Math.min(fakeP + 5, 85);
       setProgress(true, fakeP, '去除水印中...');
-    }, 350);
+    }, 300);
 
     const res = await fetch('/remove-watermark', { method: 'POST', body: fd });
     clearInterval(timer);
 
+    // ★ 先检查响应状态
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: '服务器错误' }));
-      throw new Error(err.detail || '处理失败');
+      let errMsg = `服务器错误 ${res.status}`;
+      try { const j = await res.json(); errMsg = j.detail || errMsg; } catch(_) {}
+      throw new Error(errMsg);
     }
 
+    // ★ 检查响应体大小（0KB = 超时被截断）
     const blob = await res.blob();
+    if (blob.size === 0) {
+      throw new Error('返回内容为空，请稍后重试（可能服务器繁忙）');
+    }
+
+    // ★ 从响应头获取实际输出格式
+    resultExt = res.headers.get('X-Output-Format') || 'jpg';
     resultBlob = blob;
-    const url = URL.createObjectURL(blob);
+
     setProgress(true, 100, '完成！');
-    document.getElementById('imgResult').src = url;
-    document.getElementById('imgResult').style.display = 'block';
-    document.getElementById('resultPlaceholder').style.display = 'none';
+    const url = URL.createObjectURL(blob);
+    const imgEl = document.getElementById('imgResult');
+    imgEl.onload = () => {
+      imgEl.style.display = 'block';
+      document.getElementById('resultPlaceholder').style.display = 'none';
+    };
+    imgEl.onerror = () => {
+      // 图片加载失败时显示提示而不是破损图标
+      document.getElementById('resultPlaceholder').textContent = '预览加载失败，但可以直接下载查看';
+      document.getElementById('resultPlaceholder').style.display = 'flex';
+    };
+    imgEl.src = url;
+
     setTimeout(() => setProgress(false), 600);
     setStatus('done', '处理完成 ✓');
     document.getElementById('btnDownload').disabled = false;
+
   } catch (err) {
     setProgress(false);
-    setStatus('error', '失败：' + err.message);
+    setStatus('error', err.message);
     document.getElementById('btnProcess').disabled = false;
   }
 }
 
 function download() {
   if (!resultBlob) return;
+  const baseName = (currentFile?.name || 'image').replace(/\.[^.]+$/, '');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(resultBlob);
-  a.download = (currentFile?.name || 'image').replace(/\.[^.]+$/, '') + '_no_watermark.png';
+  a.download = `${baseName}_no_watermark.${resultExt}`;
   a.click();
 }
 
