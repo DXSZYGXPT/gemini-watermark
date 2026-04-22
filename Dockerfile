@@ -2,7 +2,6 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# 安装系统依赖（OpenCV headless 需要）
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 libsm6 libxrender1 libxext6 \
     && rm -rf /var/lib/apt/lists/*

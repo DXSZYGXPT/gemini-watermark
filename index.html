@@ -13,8 +13,6 @@
   .hero p{font-size:.95rem;color:#666;line-height:1.6}
   .badge{display:inline-block;background:#e8f5e9;color:#2e7d32;font-size:.72rem;font-weight:600;padding:3px 12px;border-radius:99px;margin-bottom:.8rem}
   .card{background:#fff;border-radius:20px;border:1px solid #e5e3dd;overflow:hidden}
-
-  /* upload zone */
   .drop-zone{padding:3.5rem 2rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;cursor:pointer;border-bottom:1px solid #f0ede8;transition:background .18s}
   .drop-zone:hover,.drop-zone.over{background:#faf9f7}
   .drop-icon{width:52px;height:52px;background:#f0ede8;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
@@ -23,8 +21,6 @@
   .btn-choose{padding:10px 22px;background:#111;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:500;cursor:pointer}
   .btn-choose:hover{opacity:.82}
   #fileInput{display:none}
-
-  /* preview grid */
   .preview{display:none;padding:1.4rem;flex-direction:column;gap:1.1rem}
   .preview.show{display:flex}
   .img-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
@@ -33,17 +29,13 @@
   .img-box-head{display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid #f0ede8;font-size:.78rem;color:#888;font-weight:500}
   .dot{width:8px;height:8px;border-radius:50%}
   .r{background:#ff6059}.y{background:#ffc22d}.g{background:#28c840}
-  .img-box img,.img-box .img-placeholder{width:100%;display:block;border-radius:0}
+  .img-box img{width:100%;display:block}
   .img-placeholder{min-height:160px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:.83rem;padding:1.5rem;text-align:center;line-height:1.6}
-
-  /* progress */
   .prog-wrap{display:none;flex-direction:column;gap:5px}
   .prog-wrap.show{display:flex}
   .prog-label{display:flex;justify-content:space-between;font-size:.78rem;color:#777}
   .prog-bar{height:4px;background:#ede9e3;border-radius:99px;overflow:hidden}
   .prog-fill{height:100%;background:#111;border-radius:99px;width:0;transition:width .4s ease}
-
-  /* action bar */
   .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   .btn{padding:9px 18px;border-radius:10px;font-size:.86rem;font-weight:500;cursor:pointer;border:1px solid #e5e3dd;transition:.15s}
   .btn-primary{background:#111;color:#fff;border-color:#111}.btn-primary:hover{opacity:.82}
@@ -52,8 +44,6 @@
   .status{margin-left:auto;font-size:.79rem;padding:4px 12px;border-radius:99px;font-weight:500}
   .s-idle{background:#f0ede8;color:#888}.s-working{background:#fff8e1;color:#7a5c00}
   .s-done{background:#e8f5e9;color:#2e7d32}.s-error{background:#fdecea;color:#c62828}
-
-  /* info */
   .tips{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-top:1.5rem}
   @media(max-width:580px){.tips{grid-template-columns:1fr}}
   .tip{background:#fff;border:1px solid #e5e3dd;border-radius:14px;padding:1rem}
@@ -72,16 +62,14 @@
   </div>
 
   <div class="card">
-    <!-- 上传区 -->
     <div class="drop-zone" id="dropZone">
       <div class="drop-icon">🖼️</div>
       <h2>拖拽图片到这里</h2>
-      <p>PNG · JPG · WEBP · 最大 20MB<br>适用于所有 Gemini 生成的图片</p>
+      <p>PNG · JPG · WEBP · 最大 20MB</p>
       <button class="btn-choose" onclick="document.getElementById('fileInput').click()">选择图片</button>
       <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp">
     </div>
 
-    <!-- 预览区 -->
     <div class="preview" id="preview">
       <div class="img-grid">
         <div class="img-box">
@@ -110,18 +98,16 @@
   </div>
 
   <div class="tips">
-    <div class="tip"><div class="tip-icon">🐍</div><h3>服务端 Python</h3><p>使用经过验证的 OpenCV + 高斯定位 + TELEA inpainting，与本地版本完全一致。</p></div>
-    <div class="tip"><div class="tip-icon">🎯</div><h3>精准去除</h3><p>高斯平滑找峰值定位水印中心，四周取背景双线性插值，处理效果稳定。</p></div>
-    <div class="tip"><div class="tip-icon">🗑️</div><h3>不留副本</h3><p>图片处理完成后立即返回，服务器不保存任何上传文件。</p></div>
+    <div class="tip"><div class="tip-icon">🐍</div><h3>服务端 Python</h3><p>OpenCV TELEA inpainting + 纯 numpy 高斯定位，无浏览器兼容性问题。</p></div>
+    <div class="tip"><div class="tip-icon">🎯</div><h3>精准去除</h3><p>高斯平滑峰值定位水印中心，四周取背景双线性插值，效果稳定。</p></div>
+    <div class="tip"><div class="tip-icon">🗑️</div><h3>不留副本</h3><p>图片处理完立即返回，服务器不保存任何上传的文件。</p></div>
   </div>
   <footer>本工具仅供个人合法用途 · 请勿违反 Google 服务条款</footer>
 </div>
 
 <script>
-let currentFile = null;
-let resultBlob = null;
+let currentFile = null, resultBlob = null;
 
-// drag & drop
 const dz = document.getElementById('dropZone');
 dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
 dz.addEventListener('dragleave', () => dz.classList.remove('over'));
@@ -135,17 +121,14 @@ document.getElementById('fileInput').addEventListener('change', e => {
 });
 
 function loadFile(file) {
-  currentFile = file;
-  resultBlob = null;
-  const url = URL.createObjectURL(file);
-  document.getElementById('imgOrig').src = url;
+  currentFile = file; resultBlob = null;
+  document.getElementById('imgOrig').src = URL.createObjectURL(file);
   document.getElementById('imgResult').style.display = 'none';
   document.getElementById('imgResult').src = '';
   document.getElementById('resultPlaceholder').style.display = 'flex';
   document.getElementById('btnDownload').disabled = true;
   document.getElementById('btnProcess').disabled = false;
-  setStatus('idle', '就绪');
-  setProgress(false);
+  setStatus('idle', '就绪'); setProgress(false);
   dz.style.display = 'none';
   document.getElementById('preview').classList.add('show');
 }
@@ -154,24 +137,19 @@ async function process() {
   if (!currentFile) return;
   document.getElementById('btnProcess').disabled = true;
   document.getElementById('btnDownload').disabled = true;
-  setStatus('working', '上传中...');
-  setProgress(true, 15, '上传图片...');
+  setStatus('working', '处理中...'); setProgress(true, 20, '上传图片...');
 
   try {
     const fd = new FormData();
     fd.append('file', currentFile);
 
-    setProgress(true, 40, '服务器处理中...');
-
-    // 模拟进度（服务器在处理，无法实时知道进度）
-    let fakeP = 40;
+    let fakeP = 20;
     const timer = setInterval(() => {
-      fakeP = Math.min(fakeP + 3, 88);
+      fakeP = Math.min(fakeP + 4, 88);
       setProgress(true, fakeP, '去除水印中...');
-    }, 400);
+    }, 350);
 
     const res = await fetch('/remove-watermark', { method: 'POST', body: fd });
-
     clearInterval(timer);
 
     if (!res.ok) {
@@ -182,16 +160,13 @@ async function process() {
     const blob = await res.blob();
     resultBlob = blob;
     const url = URL.createObjectURL(blob);
-
     setProgress(true, 100, '完成！');
     document.getElementById('imgResult').src = url;
     document.getElementById('imgResult').style.display = 'block';
     document.getElementById('resultPlaceholder').style.display = 'none';
-
     setTimeout(() => setProgress(false), 600);
     setStatus('done', '处理完成 ✓');
     document.getElementById('btnDownload').disabled = false;
-
   } catch (err) {
     setProgress(false);
     setStatus('error', '失败：' + err.message);
@@ -212,23 +187,18 @@ function reset() {
   document.getElementById('fileInput').value = '';
   document.getElementById('preview').classList.remove('show');
   dz.style.display = 'flex';
-  setStatus('idle', '就绪');
-  setProgress(false);
+  setStatus('idle', '就绪'); setProgress(false);
 }
 
 function setStatus(type, text) {
   const c = document.getElementById('statusChip');
-  c.textContent = text;
-  c.className = 'status s-' + type;
+  c.textContent = text; c.className = 'status s-' + type;
 }
 function setProgress(show, pct, text) {
   const w = document.getElementById('progWrap');
   if (!show) { w.classList.remove('show'); return; }
   w.classList.add('show');
-  if (pct != null) {
-    document.getElementById('progFill').style.width = pct + '%';
-    document.getElementById('progPct').textContent = pct + '%';
-  }
+  if (pct != null) { document.getElementById('progFill').style.width = pct + '%'; document.getElementById('progPct').textContent = pct + '%'; }
   if (text) document.getElementById('progText').textContent = text;
 }
 </script>
