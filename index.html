@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Gemini 水印去除</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Segoe UI",sans-serif;background:#f5f4f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem 1rem}
+  .wrap{width:100%;max-width:780px}
+  .hero{text-align:center;margin-bottom:2rem}
+  .hero h1{font-size:2rem;font-weight:700;color:#111;letter-spacing:-0.03em;margin-bottom:.4rem}
+  .hero p{font-size:.95rem;color:#666;line-height:1.6}
+  .badge{display:inline-block;background:#e8f5e9;color:#2e7d32;font-size:.72rem;font-weight:600;padding:3px 12px;border-radius:99px;margin-bottom:.8rem}
+  .card{background:#fff;border-radius:20px;border:1px solid #e5e3dd;overflow:hidden}
+
+  /* upload zone */
+  .drop-zone{padding:3.5rem 2rem;display:flex;flex-direction:column;align-items:center;gap:.9rem;cursor:pointer;border-bottom:1px solid #f0ede8;transition:background .18s}
+  .drop-zone:hover,.drop-zone.over{background:#faf9f7}
+  .drop-icon{width:52px;height:52px;background:#f0ede8;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+  .drop-zone h2{font-size:1.05rem;font-weight:600;color:#222}
+  .drop-zone p{font-size:.85rem;color:#888;text-align:center;line-height:1.5}
+  .btn-choose{padding:10px 22px;background:#111;color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:500;cursor:pointer}
+  .btn-choose:hover{opacity:.82}
+  #fileInput{display:none}
+
+  /* preview grid */
+  .preview{display:none;padding:1.4rem;flex-direction:column;gap:1.1rem}
+  .preview.show{display:flex}
+  .img-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  @media(max-width:520px){.img-grid{grid-template-columns:1fr}}
+  .img-box{border-radius:12px;overflow:hidden;border:1px solid #e8e5df;background:#f9f8f5}
+  .img-box-head{display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid #f0ede8;font-size:.78rem;color:#888;font-weight:500}
+  .dot{width:8px;height:8px;border-radius:50%}
+  .r{background:#ff6059}.y{background:#ffc22d}.g{background:#28c840}
+  .img-box img,.img-box .img-placeholder{width:100%;display:block;border-radius:0}
+  .img-placeholder{min-height:160px;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:.83rem;padding:1.5rem;text-align:center;line-height:1.6}
+
+  /* progress */
+  .prog-wrap{display:none;flex-direction:column;gap:5px}
+  .prog-wrap.show{display:flex}
+  .prog-label{display:flex;justify-content:space-between;font-size:.78rem;color:#777}
+  .prog-bar{height:4px;background:#ede9e3;border-radius:99px;overflow:hidden}
+  .prog-fill{height:100%;background:#111;border-radius:99px;width:0;transition:width .4s ease}
+
+  /* action bar */
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{padding:9px 18px;border-radius:10px;font-size:.86rem;font-weight:500;cursor:pointer;border:1px solid #e5e3dd;transition:.15s}
+  .btn-primary{background:#111;color:#fff;border-color:#111}.btn-primary:hover{opacity:.82}
+  .btn-secondary{background:#fff;color:#333}.btn-secondary:hover{background:#f5f4f0}
+  .btn:disabled{opacity:.3;cursor:not-allowed}
+  .status{margin-left:auto;font-size:.79rem;padding:4px 12px;border-radius:99px;font-weight:500}
+  .s-idle{background:#f0ede8;color:#888}.s-working{background:#fff8e1;color:#7a5c00}
+  .s-done{background:#e8f5e9;color:#2e7d32}.s-error{background:#fdecea;color:#c62828}
+
+  /* info */
+  .tips{display:grid;grid-template-columns:repeat(3,1fr);gap:.9rem;margin-top:1.5rem}
+  @media(max-width:580px){.tips{grid-template-columns:1fr}}
+  .tip{background:#fff;border:1px solid #e5e3dd;border-radius:14px;padding:1rem}
+  .tip-icon{font-size:1.2rem;margin-bottom:.45rem}
+  .tip h3{font-size:.88rem;font-weight:600;margin-bottom:.25rem}
+  .tip p{font-size:.78rem;color:#777;line-height:1.5}
+  footer{text-align:center;margin-top:1.5rem;font-size:.74rem;color:#bbb}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="badge">⚡ 服务端 Python 处理 · 结果精准</div>
+    <h1>Gemini 水印去除</h1>
+    <p>上传 Gemini 生成的图片，服务器自动识别并精确去除右下角四角星水印</p>
+  </div>
+
+  <div class="card">
+    <!-- 上传区 -->
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon">🖼️</div>
+      <h2>拖拽图片到这里</h2>
+      <p>PNG · JPG · WEBP · 最大 20MB<br>适用于所有 Gemini 生成的图片</p>
+      <button class="btn-choose" onclick="document.getElementById('fileInput').click()">选择图片</button>
+      <input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp">
+    </div>
+
+    <!-- 预览区 -->
+    <div class="preview" id="preview">
+      <div class="img-grid">
+        <div class="img-box">
+          <div class="img-box-head"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>&nbsp;原图（含水印）</div>
+          <img id="imgOrig" src="" alt="原图">
+        </div>
+        <div class="img-box">
+          <div class="img-box-head"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>&nbsp;处理后（水印已移除）</div>
+          <div class="img-placeholder" id="resultPlaceholder">点击「开始处理」</div>
+          <img id="imgResult" src="" alt="结果" style="display:none">
+        </div>
+      </div>
+
+      <div class="prog-wrap" id="progWrap">
+        <div class="prog-label"><span id="progText">处理中...</span><span id="progPct"></span></div>
+        <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnProcess" onclick="process()">✨ 开始处理</button>
+        <button class="btn btn-secondary" id="btnDownload" disabled onclick="download()">⬇️ 下载结果</button>
+        <button class="btn btn-secondary" onclick="reset()">🔄 重新上传</button>
+        <span class="status s-idle" id="statusChip">就绪</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="tips">
+    <div class="tip"><div class="tip-icon">🐍</div><h3>服务端 Python</h3><p>使用经过验证的 OpenCV + 高斯定位 + TELEA inpainting，与本地版本完全一致。</p></div>
+    <div class="tip"><div class="tip-icon">🎯</div><h3>精准去除</h3><p>高斯平滑找峰值定位水印中心，四周取背景双线性插值，处理效果稳定。</p></div>
+    <div class="tip"><div class="tip-icon">🗑️</div><h3>不留副本</h3><p>图片处理完成后立即返回，服务器不保存任何上传文件。</p></div>
+  </div>
+  <footer>本工具仅供个人合法用途 · 请勿违反 Google 服务条款</footer>
+</div>
+
+<script>
+let currentFile = null;
+let resultBlob = null;
+
+// drag & drop
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadFile(f);
+});
+document.getElementById('fileInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+
+function loadFile(file) {
+  currentFile = file;
+  resultBlob = null;
+  const url = URL.createObjectURL(file);
+  document.getElementById('imgOrig').src = url;
+  document.getElementById('imgResult').style.display = 'none';
+  document.getElementById('imgResult').src = '';
+  document.getElementById('resultPlaceholder').style.display = 'flex';
+  document.getElementById('btnDownload').disabled = true;
+  document.getElementById('btnProcess').disabled = false;
+  setStatus('idle', '就绪');
+  setProgress(false);
+  dz.style.display = 'none';
+  document.getElementById('preview').classList.add('show');
+}
+
+async function process() {
+  if (!currentFile) return;
+  document.getElementById('btnProcess').disabled = true;
+  document.getElementById('btnDownload').disabled = true;
+  setStatus('working', '上传中...');
+  setProgress(true, 15, '上传图片...');
+
+  try {
+    const fd = new FormData();
+    fd.append('file', currentFile);
+
+    setProgress(true, 40, '服务器处理中...');
+
+    // 模拟进度（服务器在处理，无法实时知道进度）
+    let fakeP = 40;
+    const timer = setInterval(() => {
+      fakeP = Math.min(fakeP + 3, 88);
+      setProgress(true, fakeP, '去除水印中...');
+    }, 400);
+
+    const res = await fetch('/remove-watermark', { method: 'POST', body: fd });
+
+    clearInterval(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: '服务器错误' }));
+      throw new Error(err.detail || '处理失败');
+    }
+
+    const blob = await res.blob();
+    resultBlob = blob;
+    const url = URL.createObjectURL(blob);
+
+    setProgress(true, 100, '完成！');
+    document.getElementById('imgResult').src = url;
+    document.getElementById('imgResult').style.display = 'block';
+    document.getElementById('resultPlaceholder').style.display = 'none';
+
+    setTimeout(() => setProgress(false), 600);
+    setStatus('done', '处理完成 ✓');
+    document.getElementById('btnDownload').disabled = false;
+
+  } catch (err) {
+    setProgress(false);
+    setStatus('error', '失败：' + err.message);
+    document.getElementById('btnProcess').disabled = false;
+  }
+}
+
+function download() {
+  if (!resultBlob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(resultBlob);
+  a.download = (currentFile?.name || 'image').replace(/\.[^.]+$/, '') + '_no_watermark.png';
+  a.click();
+}
+
+function reset() {
+  currentFile = null; resultBlob = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('preview').classList.remove('show');
+  dz.style.display = 'flex';
+  setStatus('idle', '就绪');
+  setProgress(false);
+}
+
+function setStatus(type, text) {
+  const c = document.getElementById('statusChip');
+  c.textContent = text;
+  c.className = 'status s-' + type;
+}
+function setProgress(show, pct, text) {
+  const w = document.getElementById('progWrap');
+  if (!show) { w.classList.remove('show'); return; }
+  w.classList.add('show');
+  if (pct != null) {
+    document.getElementById('progFill').style.width = pct + '%';
+    document.getElementById('progPct').textContent = pct + '%';
+  }
+  if (text) document.getElementById('progText').textContent = text;
+}
+</script>
+</body>
+</html>
